@@ -57,7 +57,8 @@ typedef struct {
 
 static ra_filter_t ra_filter;
 
-extern int g_bell_status; // value 0 indicates bell is not pressed, 1 means bell is pressed.
+extern volatile int g_bell_status; // value 0 indicates bell is not pressed, 1 means bell is pressed.
+extern volatile bool g_unlock_requested;
 
 static ra_filter_t *ra_filter_init(ra_filter_t *filter, size_t sample_size) {
   memset(filter, 0, sizeof(ra_filter_t));
@@ -666,6 +667,17 @@ static esp_err_t bell_status_handler(httpd_req_t *req) {
   return err;
 }
 
+static esp_err_t unlock_handler(httpd_req_t *req)
+{
+    // Set the flag
+    g_unlock_requested = true;
+
+    // You can return a response
+    const char* resp_str = "Unlock triggered";
+    httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
+
+    return ESP_OK;
+}
 
 static esp_err_t index_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
@@ -845,6 +857,13 @@ void startCameraServer() {
 #endif
   };
 
+  httpd_uri_t unlock_uri = {
+    .uri       = "/unlock",
+    .method    = HTTP_POST,
+    .handler   = unlock_handler,
+    .user_ctx  = NULL
+};
+
   ra_filter_init(&ra_filter, 20);
 
   log_i("Starting web server on port: '%d'", config.server_port);
@@ -864,6 +883,7 @@ void startCameraServer() {
 
 
     httpd_register_uri_handler(camera_httpd, &bell_status_uri);
+    httpd_register_uri_handler(camera_httpd, &unlock_uri);
   }
 
   config.server_port += 1;
