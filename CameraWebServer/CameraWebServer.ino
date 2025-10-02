@@ -12,6 +12,8 @@
 const char *ssid =  "Randhir _4G";//"OnePlus Nord 5 D664";
 const char *password = "8826872988";//"vhtj6595";
 
+int g_bell_status = 0;
+
 // Static IP configuration
 IPAddress local_IP(192, 168, 1, 10);   // Choose a fixed IP (must be free in your network)
 IPAddress gateway(192,168,1,1);      // Your router IP
@@ -123,6 +125,7 @@ void setup() {
     Serial.println("Static IP configured successfully");
   }
 
+
   WiFi.begin(ssid, password);
   WiFi.setSleep(false);
 
@@ -142,10 +145,19 @@ void setup() {
   Serial.print("Camera Ready! Use 'http://");
   Serial.print(WiFi.localIP());
   Serial.println("' to connect");
+
 }
 
 void loop() {
   // Do nothing. Everything is done in another task by the web server
   delay(1000);
   Serial.println("Hello World!!");
+
+  if (Serial.available() > 0) {       // Check if data is available
+    String input = Serial.readStringUntil('\n');  // Read until Enter
+    Serial.print("You typed: ");
+    Serial.println(input);
+
+    g_bell_status = 1;
+  }
 }

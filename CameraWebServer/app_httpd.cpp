@@ -57,6 +57,8 @@ typedef struct {
 
 static ra_filter_t ra_filter;
 
+extern int g_bell_status; // value 0 indicates bell is not pressed, 1 means bell is pressed.
+
 static ra_filter_t *ra_filter_init(ra_filter_t *filter, size_t sample_size) {
   memset(filter, 0, sizeof(ra_filter_t));
 
@@ -649,6 +651,22 @@ static esp_err_t win_handler(httpd_req_t *req) {
   return httpd_resp_send(req, NULL, 0);
 }
 
+static esp_err_t bell_status_handler(httpd_req_t *req) {
+
+  char json_response[1024] = {0};
+  char *p = json_response;
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  
+  sprintf(p, "{\"bell_status\":%d}", g_bell_status);
+
+  esp_err_t err = httpd_resp_send(req, json_response, strlen(json_response));
+  g_bell_status = 0;
+
+  return err;
+}
+
+
 static esp_err_t index_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
   httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
@@ -814,6 +832,19 @@ void startCameraServer() {
 #endif
   };
 
+  httpd_uri_t bell_status_uri = {
+    .uri = "/bell_status",
+    .method = HTTP_GET,
+    .handler = bell_status_handler,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+
   ra_filter_init(&ra_filter, 20);
 
   log_i("Starting web server on port: '%d'", config.server_port);
@@ -830,6 +861,9 @@ void startCameraServer() {
     httpd_register_uri_handler(camera_httpd, &greg_uri);
     httpd_register_uri_handler(camera_httpd, &pll_uri);
     httpd_register_uri_handler(camera_httpd, &win_uri);
+
+
+    httpd_register_uri_handler(camera_httpd, &bell_status_uri);
   }
 
   config.server_port += 1;
